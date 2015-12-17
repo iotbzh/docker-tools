@@ -1,7 +1,33 @@
 # docker-tools
-Collection of scripts to ease operations on docker containers, and most notably to have containers running with fixed IP adresses
+Collection of Linux bash scripts to ease operations on docker containers, and most notably to have containers running with fixed IP adresses
 
-## docker-run-host
+## Installation
+
+First, clone the Git repository and enter in directory:
+```
+# git clone https://github.com/iotbzh/docker-tools.git
+# cd docker-tools
+```
+
+Run the following command as root to install the scripts:
+```
+# make install
+```
+or
+```
+# sudo make install
+```
+
+Scripts will be installed in /usr/local/bin by default. 
+
+To change the prefix, add the PREFIX variable in command line, for example:
+```
+# make install PREFIX=/usr
+```
+
+## Available commands
+
+### docker-run-host
 This command wraps 'docker run' and docker-net-start (see below).
 
 Example:
@@ -10,7 +36,7 @@ Example:
 docker-run-host debian:latest host1
 ```
 
-## docker-netstart
+### docker-netstart
 This command will assign a fixed IP address and hostname to the specified container. 
 
 The container must be previously run with option --net=none.
@@ -24,7 +50,7 @@ docker run --detach=true --net=none --hostname=$HOSTNAME --name=$HOSTNAME \
 docker-netstart $HOSTNAME
 ```
 
-## docker-enter
+### docker-enter
 Enters into a container by executing /bin/bash. This is simply a shortcut to 'docker exec'
 
 Example:
@@ -33,7 +59,7 @@ Example:
 root@host1:/#
 ```
 
-## docker-listimages
+### docker-listimages
 List repositories and images on Docker registry 2.0 server
 
 Example:

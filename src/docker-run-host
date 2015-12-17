@@ -1,0 +1,46 @@
+#!/bin/bash 
+
+############################################################################
+# Copyright 2015 IoT.bzh
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+############################################################################
+
+# Author: Stephane Desneux
+# Date:   October-2015
+# Object: Wrapper over 'docker run' and docker-netstart
+# Version: @VERSION@
+# Revision: @URL@ @REVISION@
+
+IMAGE=$1
+HOSTNAME=$2
+shift 2
+
+usage() {
+	echo "Usage: $(basename $0) <docker_image> <hostname> [extra args to 'docker run']" >&2
+	exit 1
+}
+
+[[ -z "$(getent hosts $HOSTNAME)" ]] && { echo "Invalid hostname" >&2; usage; }
+[[ -z "$IMAGE" ]] && { echo "Invalid docker image" >&2; usage; }
+
+set -e
+
+trap "echo 'Removing container'; docker stop $HOSTNAME || true; docker rm $HOSTNAME || true" STOP INT QUIT ERR
+
+docker run --detach=true --net=none --hostname=$HOSTNAME --name=$HOSTNAME \
+        --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -it \
+		"$@" \
+		$IMAGE
+
+docker-netstart $HOSTNAME
