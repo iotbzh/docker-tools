@@ -10,7 +10,7 @@ VERSION=$(shell cat VERSION)
 all: help
 
 help:
-	@echo "Usage as root:"
+	@echo "Usage (root access required):"
 	@echo "* make install"
 	@echo "  will install scripts in $(PREFIX)" 
 	@echo "* make install PREFIX=/usr"
@@ -22,8 +22,8 @@ help:
 
 install: $(OUTPUTS)
 	@echo "Installing scripts $(OUTPUTS) into $(PREFIX)/bin"
-	@mkdir -p $(PREFIX)/bin || { echo "Installation failed: you need to be root."; false; }
-	@install $(OUTPUTS) -g $$({ getent group docker || echo root; } | cut -f1 -d:) -m 750 $(PREFIX)/bin || { echo "Installation failed: you must be root."; false; }
+	@sudo mkdir -p $(PREFIX)/bin || { echo "Installation failed: you need to be root."; false; }
+	@sudo install $(OUTPUTS) -g $$({ getent group docker || echo root; } | cut -f1 -d:) -m 750 $(PREFIX)/bin || { echo "Installation failed: you must be root."; false; }
 
 clean:
 	@rm -vf $(OUTPUTS)
