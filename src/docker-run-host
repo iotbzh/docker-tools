@@ -31,7 +31,7 @@ usage() {
 	exit 1
 }
 
-[[ -z "$(getent hosts $HOSTNAME)" ]] && { echo "Invalid hostname" >&2; usage; }
+[[ -z "$HOSTNAME" || -z "$(getent hosts $HOSTNAME)" ]] && { echo "Invalid hostname" >&2; usage; }
 [[ -z "$IMAGE" ]] && { echo "Invalid docker image" >&2; usage; }
 
 set -e

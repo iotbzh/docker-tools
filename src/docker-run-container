@@ -23,22 +23,18 @@
 # Revision: @URL@ @REVISION@
 
 IMAGE=$1
-HOSTNAME=$2
-shift 2
+shift 1
 
 usage() {
-	echo "Usage: $(basename $0) <docker_image> <hostname> [extra args to 'docker run']" >&2
+	echo "Usage: $(basename $0) <docker_image> [extra args to 'docker run']" >&2
 	exit 1
 }
 
-[[ -z "$(getent hosts $HOSTNAME)" ]] && { echo "Invalid hostname" >&2; usage; }
 [[ -z "$IMAGE" ]] && { echo "Invalid docker image" >&2; usage; }
 
 set -e
 
-trap "echo 'Removing container'; docker stop $HOSTNAME || true; docker rm $HOSTNAME || true" STOP INT QUIT ERR
-
-docker run --detach=true --hostname=$HOSTNAME --name=$HOSTNAME \
+docker run --detach=true \
         --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -it \
 		"$@" \
 		$IMAGE
