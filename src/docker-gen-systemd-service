@@ -1,0 +1,34 @@
+#!/bin/bash
+
+VM=${1:-@VMNAME@}
+
+SYSDIR=/usr/lib/systemd/system/
+[[ ! -d $SYSDIR ]] && SYSDIR=/etc/systemd/system
+[[ ! -d $SYSDIR ]] && SYSDIR=/lib/systemd/system
+[[ ! -d $SYSDIR ]] && echo "Unable to determine systemd directory." >&2
+
+DOCKERPATH=/var/lib/docker
+[[ ! -d $DOCKERPATH ]] && DOCKERPATH=/docker
+[[ ! -d $DOCKERPATH ]] && echo "Unable to determine docker directory." >&2
+
+echo "Store the output to $SYSDIR/docker-$VM.service" >&2
+echo "----" >&2
+
+cat <<EOF
+[Unit]
+Description=Start docker container $VM
+After=docker.service
+ConditionPathExists=$DOCKERPATH
+
+[Service]
+ExecStart=/usr/local/bin/docker-netstart $VM
+Type=oneshot
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+Alias=docker-$VM.service
+EOF
+
+echo "----" >&2
+
