@@ -32,6 +32,16 @@
   NETMASK=24
   SUBNET=10.20.1.0  
 
+# Source global config file if any
+# --------------------------------
+
+CONFIG_FILE=/etc/docker-tools.conf
+
+if [[ -f $CONFIG_FILE ]]; then
+	echo "Loading config file $CONFIG_FILE" >&2
+	. $CONFIG_FILE
+fi
+
 # Check if argument exist
 # --------------------------
 OPTCOUNT=0
