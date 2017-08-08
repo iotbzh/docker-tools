@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ############################################################################
-# Copyright 2015 IoT.bzh
+# Copyright 2017 IoT.bzh
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,21 +16,24 @@
 # limitations under the License.
 ############################################################################
 
-# Author: Fulup Ar Foll
-# Date:   July-2015
-# Object:  Start a Docker container with IP addr deducted from hostname & DNS
-# Syntax: docker-start [brige=br0] [subnet=10.20.1.0] [netmask=24] [addr=auto] [gateway=auto] containerName/ID
+# Author: Fulup Ar Foll, Stéphane Desneux
+# Date:   July-2017
+# Object:  Start a Docker container from systemd with IP addr deducted from hostname & DNS
+# Syntax: docker-service [brige=br0] [subnet=10.20.1.0] [netmask=24] [addr=auto] [gateway=auto] containerName/ID
 
 # Source:     https://gist.github.com/fulup-bzh
 # Reference:  http://blog.oddbit.com/2014/08/11/four-ways-to-connect-a-docker
 # Version: @VERSION@
 # Revision: @URL@ @REVISION@
   
+
+# this script is inspired from docker-netstart and adapted to startup through systemd
+
 # Default Values
 # ----------------
-  BRIDGE=br0
-  NETMASK=24
-  SUBNET=10.20.1.0  
+BRIDGE=br0
+NETMASK=24
+SUBNET=10.20.1.0  
 
 # Source global config file if any
 # --------------------------------
@@ -152,26 +155,25 @@ if test -z "$CPID"; then
 fi
 
 # if root ssh auth does not exist buit one from hypervisor
-sudo test -f  /root/.ssh/authorized_keys
-if test $? -eq 0; then
-  sudo nsenter -t $CPID --mount ls /root/.ssh/authorized_keys >/dev/null 2>/dev/null
-  if test $? -ne 0; then
+if [ ! -f  /root/.ssh/authorized_keys ]; then
+  nsenter -t $CPID --mount ls /root/.ssh/authorized_keys >/dev/null 2>/dev/null
+  if [ $? -ne 0 ]; then
     echo "Setting container initial /root/.ssh/authorized_keys"
-    sudo nsenter -t $CPID --mount mkdir -p /root/.ssh 2>/dev/null
-    sudo cat /root/.ssh/authorized_keys | sudo nsenter -t $CPID --mount tee /root/.ssh/authorized_keys >/dev/null
+    nsenter -t $CPID --mount mkdir -p /root/.ssh 2>/dev/null
+    cat /root/.ssh/authorized_keys | nsenter -t $CPID --mount tee /root/.ssh/authorized_keys >/dev/null
   fi
 fi
 
  # make sure CNAME is not to long for an network interface name
  CNETNAME=${CNAME:0:8}-veth0
 
- sudo ip link add veth0 type veth peer name $CNETNAME       # create a new interface on hypervisor
- sudo ip link set $CNETNAME  up                             # activate newly create interface on host
- sudo brctl addif $BRIDGE $CNETNAME                         # add new interface to the bridge
- sudo ip link set netns $CPID dev veth0                     # move veth0 interface into container name space
- sudo nsenter -t $CPID --net ip link set veth0 up           # up veth0 within container
- sudo nsenter -t $CPID --net ip addr add  $CADDR/$NETMASK dev veth0     # set IP addr within container
- sudo nsenter -t $CPID --net ip route add default via $GATEWAY dev veth0
+ip link add veth0 type veth peer name $CNETNAME       # create a new interface on hypervisor
+ip link set $CNETNAME  up                             # activate newly create interface on host
+brctl addif $BRIDGE $CNETNAME                         # add new interface to the bridge
+ip link set netns $CPID dev veth0                     # move veth0 interface into container name space
+nsenter -t $CPID --net ip link set veth0 up           # up veth0 within container
+nsenter -t $CPID --net ip addr add  $CADDR/$NETMASK dev veth0     # set IP addr within container
+nsenter -t $CPID --net ip route add default via $GATEWAY dev veth0
 
 echo "enter container => docker exec -it $CNAME bash"
 
@@ -181,3 +183,4 @@ if test $? -ne 0; then
 else 
    echo "OK: ping to $CADDR succeeded"
 fi
+
