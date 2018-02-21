@@ -21,10 +21,10 @@ After=docker.service
 ConditionPathExists=$DOCKERPATH
 
 [Service]
-ExecStart=/usr/local/bin/docker-netstart-service $VM
+ExecStart=/usr/local/bin/docker-netstart $VM
 ExecStop=/usr/bin/docker stop $VM
 Type=oneshot
-RemainAfterExit=no
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target

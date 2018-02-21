@@ -1,0 +1,87 @@
+#!/bin/bash
+
+##########################################
+# WARNING WARNING WARNING WARNING
+#
+# This script is an example to start a new AGL container
+#
+# You should customize it to fit your environment and in particular
+# adjust the paths and permissions where needed.
+#
+# Note that sharing volumes with host system is not mandatory: it
+# was just added for performances reasons: building from a SSD is
+# just faster than using the container filesystem: that's why /xdt is
+# mounted from there. Same applies to ~/mirror and ~/share, which are
+# just 2 convenient folders to store reference build caches (used in prepare_meta script)
+#
+##########################################
+
+SSH_PORT=22
+
+USERISD=1664
+USERGROUP=1664
+
+function usage() {
+	echo "Usage: $(basename $0) <instance ID> [image name]"  >&2
+	echo "Instance ID must be 0 or a positive integer (1,2,...)" >&2
+	echo "Image name is optional: 'make show-image' is used by default to get image" >&2
+	echo "Default image: $DEFIMAGE" >&2
+	exit 1
+}
+
+while (($#)); do
+	case "$1" in
+		-n|--name)
+			NAME="$2";
+			echo NAME $NAME
+			shift 2;;
+		-i|--image)
+			IMAGE="$2";
+			shift 2;;
+		-h|--help)
+			usage
+			shift;
+			break;;
+		--)
+			shift;
+			break;;
+		*)
+			echo "Internal error";
+			exit 1;;
+	esac
+done
+
+if [[ -z "${NAME}" ]] ; then
+	echo "No NAME Docker"
+	exit 1;
+fi
+
+if [[ -z "${IMAGE}" ]] ; then
+	echo "No IMAGE Docker"
+	exit 1;
+fi
+
+
+SSHDIR=$HOME/ssd/localssh_${NAME}
+MIRRORDIR=$HOME/ssd/localmirror_${NAME}
+XDTDIR=$HOME/ssd/xdt_${NAME}
+SHAREDDIR=$HOME/ssd/share
+
+mkdir -p ${SSHDIR} ${MIRRORDIR} ${XDTDIR} ${SHAREDDIR}
+
+chown ${USERISD}:${USERGROUP} ${SSHDIR}
+chmod 0700 ${SSHDIR}
+chown ${USERISD}:${USERGROUP} ${MIRRORDIR}
+chown ${USERISD}:${USERGROUP} ${XDTDIR}
+chown ${USERISD}:${USERGROUP} ${SHAREDDIR}
+
+docker create \
+	--net=none \
+	--hostname=$NAME --name=$NAME \
+	--privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+	-v $SSHDIR:/home/devel/.ssh \
+	-v $MIRRORDIR:/home/devel/mirror \
+	-v $SHAREDDIR:/home/devel/share \
+	-v $XDTDIR:/xdt \
+	-it $IMAGE
+

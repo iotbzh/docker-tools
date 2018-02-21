@@ -2,13 +2,13 @@
 
 ############################################################################
 # Copyright 2015 IoT.bzh
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,21 +25,25 @@
 # Reference:  http://blog.oddbit.com/2014/08/11/four-ways-to-connect-a-docker
 # Version: @VERSION@
 # Revision: @URL@ @REVISION@
-  
+
 # Default Values
 # ----------------
   BRIDGE=br0
   NETMASK=24
-  SUBNET=10.20.1.0  
+  SUBNET=10.20.1.0
 
 # Source global config file if any
 # --------------------------------
 
 CONFIG_FILE=/etc/docker-tools.conf
 
-if [[ -f $CONFIG_FILE ]]; then
+if [ "$(id -u)" -ne "0" ]; then
 	echo "Loading config file $CONFIG_FILE" >&2
 	. $CONFIG_FILE
+fi
+
+if [ "$(id -u)" -ne "0" ]; then
+        SUDOCMD="sudo "
 fi
 
 # Check if argument exist
@@ -57,8 +61,8 @@ CheckArg() {
     gateway)  GATEWAY="$val" ;;
     subnet)   SUBNET="$val"  ;;
     netmask)  NETMASK="$val" ;;
-	   
-    *) 
+
+    *)
       echo "Error: $cmd=xxxx unknown option"
       exit 1
       ;;
@@ -94,11 +98,11 @@ if test -z "$CNAME"; then
 # docker run --detach=true --net=none --hostname=$CNAME --name=$CNAME --privileged \
 	-v /sys/fs/cgroup:/sys/fs/cgroup:ro -i -t $CDIST:latest /lib/systemd/systemd
 
-# docker-start.sh $CNAME 
+# docker-start.sh $CNAME
 EOF
   exit
 fi
- 
+
 ip link show "$BRIDGE" >/dev/null
 if test $? -ne 0
 then
@@ -121,7 +125,7 @@ fi
 
 # check container exist and is stopped
   DOCKID=`docker ps -a | grep $CNAME`
-  if test -z "$DOCKID"; then 
+  if test -z "$DOCKID"; then
     echo "Hoops: container=[$CNAME] not found => docker ps -a"
     exit
   fi
@@ -135,49 +139,64 @@ if test -z "$CADDR"; then
   fi
 fi
 
-echo "start docker container name=$CNAME addr=$CADDR/$NETMASK"
-# docker run  --detach=true --net=none --hostname=$CNAME --name=$CNAME --privileged  -i -t centos:latest /lib/systemd/systemd
-
 # if container is stopped let's start it now
-DOCKSTOP=`docker ps --filter "status=exited" | grep $CNAME`
-if test ! -z "$DOCKSTOP"; then 
-  docker start $CNAME >/dev/null
+DOCKSTOP=`docker ps --filter "status=created" --filter "status=exited"  | grep $CNAME`
+if [ ! -z "$DOCKSTOP" ]; then
+	docker start $CNAME >/dev/null
+	if [ $? -ne 0 ];then
+		echo "Failed to start docker $CNAME "
+		exit 1
+	fi
 fi
-
+sleep 0.5
 # get container namespace PID
-CPID=`docker inspect --format {{.State.Pid}} $CNAME`  # get container namespace PID
-if test -z "$CPID"; then
+echo -n wait container namespace PID
+CPID=-1
+count=5
+while [ $count -ne 0 ]; do
+	CPID=`docker inspect --format {{.State.Pid}} $CNAME`  # get container namespace PID
+	[[ "$CPID" -gt 0 ]] && break
+	sleep 1
+	echo -n "."
+	count=$(expr $count - 1);
+done
+
+if ! [ $CPID -gt 0 ]; then
    echo "Hoops: failled to start container=[$CNAME]"
    exit
 fi
 
-# if root ssh auth does not exist buit one from hypervisor
-sudo test -f  /root/.ssh/authorized_keys
+# if root ssh auth does not exist built one from hypervisor
+${SUDOCMD} test -f  /root/.ssh/authorized_keys
 if test $? -eq 0; then
-  sudo nsenter -t $CPID --mount ls /root/.ssh/authorized_keys >/dev/null 2>/dev/null
+  ${SUDOCMD} nsenter -t $CPID --mount ls /root/.ssh/authorized_keys >/dev/null 2>/dev/null
   if test $? -ne 0; then
     echo "Setting container initial /root/.ssh/authorized_keys"
-    sudo nsenter -t $CPID --mount mkdir -p /root/.ssh 2>/dev/null
-    sudo cat /root/.ssh/authorized_keys | sudo nsenter -t $CPID --mount tee /root/.ssh/authorized_keys >/dev/null
+    ${SUDOCMD} nsenter -t $CPID --mount mkdir -p /root/.ssh 2>/dev/null
+    ${SUDOCMD} cat /root/.ssh/authorized_keys | ${SUDOCMD} nsenter -t $CPID --mount tee /root/.ssh/authorized_keys >/dev/null
   fi
 fi
 
- # make sure CNAME is not to long for an network interface name
- CNETNAME=${CNAME:0:8}-veth0
 
- sudo ip link add veth0 type veth peer name $CNETNAME       # create a new interface on hypervisor
- sudo ip link set $CNETNAME  up                             # activate newly create interface on host
- sudo brctl addif $BRIDGE $CNETNAME                         # add new interface to the bridge
- sudo ip link set netns $CPID dev veth0                     # move veth0 interface into container name space
- sudo nsenter -t $CPID --net ip link set veth0 up           # up veth0 within container
- sudo nsenter -t $CPID --net ip addr add  $CADDR/$NETMASK dev veth0     # set IP addr within container
- sudo nsenter -t $CPID --net ip route add default via $GATEWAY dev veth0
+NBPORT=$(brctl showstp $BRIDGE |grep "port id" | wc -l)
+NEXTPORT=$(( $NBPORT + 1))
+# make sure CNAME is not to long for an network interface name
+#And must be uniq
+CNETNAME=${CNAME:0:6}-veth${NEXTPORT}
+
+${SUDOCMD} ip link add veth0 type veth peer name $CNETNAME       # create a new interface on hypervisor
+${SUDOCMD} ip link set $CNETNAME  up                             # activate newly create interface on host
+${SUDOCMD} brctl addif $BRIDGE $CNETNAME                         # add new interface to the bridge
+${SUDOCMD} ip link set netns $CPID dev veth0                     # move veth0 interface into container name space
+${SUDOCMD} nsenter -t $CPID --net ip link set veth0 up           # up veth0 within container
+${SUDOCMD} nsenter -t $CPID --net ip addr add  $CADDR/$NETMASK dev veth0     # set IP addr within container
+${SUDOCMD} nsenter -t $CPID --net ip route add default via $GATEWAY dev veth0
 
 echo "enter container => docker exec -it $CNAME bash"
 
-ping -W 10 -c 1 $CADDR >/dev/null
+ping -W 10 -c 3 $CADDR >/dev/null
 if test $? -ne 0; then
    echo "ERROR: ping to $CADDR failed"
-else 
+else
    echo "OK: ping to $CADDR succeeded"
 fi
