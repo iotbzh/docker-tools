@@ -11,24 +11,30 @@ DOCKERPATH=/var/lib/docker
 [[ ! -d $DOCKERPATH ]] && DOCKERPATH=/docker
 [[ ! -d $DOCKERPATH ]] && echo "Unable to determine docker directory." >&2
 
-echo "Store the output to $SYSDIR/docker-$VM.service" >&2
+echo "Store the output to $SYSDIR/docker@.service" >&2
 echo "----" >&2
 
 cat <<EOF
 [Unit]
-Description=Start docker container $VM
+Description=Start docker container §i
 After=docker.service
 ConditionPathExists=$DOCKERPATH
 
 [Service]
+<<<<<<< Updated upstream
 ExecStart=/usr/local/bin/docker-netstart $VM
 ExecStop=/usr/bin/docker stop $VM
 Type=oneshot
 RemainAfterExit=yes
+=======
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/local/bin/docker-netstart-service %i
+ExecStop=/usr/bin/docker stop %i
+>>>>>>> Stashed changes
 
 [Install]
 WantedBy=multi-user.target
-Alias=docker-$VM.service
 EOF
 
 echo "----" >&2
