@@ -21,17 +21,10 @@ After=docker.service
 ConditionPathExists=$DOCKERPATH
 
 [Service]
-<<<<<<< Updated upstream
-ExecStart=/usr/local/bin/docker-netstart $VM
-ExecStop=/usr/bin/docker stop $VM
-Type=oneshot
-RemainAfterExit=yes
-=======
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/local/bin/docker-netstart-service %i
+ExecStart=/usr/local/bin/docker-netstart %i
 ExecStop=/usr/bin/docker stop %i
->>>>>>> Stashed changes
 
 [Install]
 WantedBy=multi-user.target
