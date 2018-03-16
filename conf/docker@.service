@@ -1,0 +1,13 @@
+[Unit]
+Description=Start docker container %i
+After=docker.service
+ConditionPathExists=/var/lib/docker
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/docker-netstart %i
+ExecStop=/usr/bin/docker stop %i
+
+[Install]
+WantedBy=multi-user.target
