@@ -37,7 +37,7 @@
 
 CONFIG_FILE=/etc/docker-tools.conf
 
-if [ "$(id -u)" -ne "0" ]; then
+if [ -f $CONFIG_FILE ]; then
 	echo "Loading config file $CONFIG_FILE" >&2
 	. $CONFIG_FILE
 fi
