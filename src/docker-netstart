@@ -177,12 +177,8 @@ if test $? -eq 0; then
   fi
 fi
 
-
-NBPORT=$(brctl showstp $BRIDGE |grep "port id" | wc -l)
-NEXTPORT=$(( $NBPORT + 1))
-# make sure CNAME is not to long for an network interface name
-#And must be uniq
-CNETNAME=${CNAME:0:6}-veth${NEXTPORT}
+CID=$(docker inspect --format {{.Id}} $CNAME)
+CNETNAME=${CID:0:8}-veth
 
 ${SUDOCMD} ip link add veth0 type veth peer name $CNETNAME       # create a new interface on hypervisor
 ${SUDOCMD} ip link set $CNETNAME  up                             # activate newly create interface on host
