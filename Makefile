@@ -15,7 +15,7 @@ help:
 	@echo "Usage (root access required):"
 	@echo "* make install"
 	@echo "  will install scripts in $(PREFIX)" 
-	@echo "* make install PREFIX=/usr"
+	@echo "* make install DESTDIR=/ PREFIX=/usr"
 	@echo "  changes the prefix (in this example, the scripts will be installed in /usr/bin)"
 
 %: src/%
@@ -23,12 +23,14 @@ help:
 	@sed -e 's|@URL@|$(REMOTE)|g' -e 's|@REVISION@|$(REVISION)|g' -e 's|@VERSION@|$(VERSION)|g' $< >$@
 
 install: $(SCRIPTS) $(DOCKERTOOLS) $(DOCKERUNIT)
-	@echo "Installing scripts $(notdir $(SCRIPTS)) into $(PREFIX)/bin"
-	@sudo mkdir -p $(PREFIX)/bin || { echo "Installation failed: you need to be root."; false; }
-	@sudo install $(SCRIPTS) -g $$({ getent group docker || echo root; } | cut -f1 -d:) -m 750 $(PREFIX)/bin || { echo "Installation failed: you must be root."; false; }
-	@echo "Installing configuration files $(notdir $(DOCKERUNIT)) $(notdir $(DOCKERTOOLS)) into /etc"
-	@sudo install $(DOCKERTOOLS) -g $$({ getent group docker || echo root; } | cut -f1 -d:) -m 644 /etc 
-	@sudo install $(DOCKERUNIT) -m 644 /etc/systemd/system
+	@echo "Installing scripts $(notdir $(SCRIPTS)) into $(DESTDIR)$(PREFIX)/bin"
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install $(SCRIPTS) -m 750 $(DESTDIR)$(PREFIX)/bin
+	@echo "Installing configuration files $(notdir $(DOCKERUNIT)) $(notdir $(DOCKERTOOLS)) into $(DESTDIR)/etc"
+	mkdir -p $(DESTDIR)/etc
+	install $(DOCKERTOOLS)  -m 644 $(DESTDIR)/etc
+	mkdir -p $(DESTDIR)/usr/lib/systemd/system
+	install $(DOCKERUNIT) -m 644 $(DESTDIR)/usr/lib/systemd/system
 
 clean:
 	@rm -vf $(SCRIPTS)
