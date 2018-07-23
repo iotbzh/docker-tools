@@ -3,7 +3,9 @@
     <param name="url">https://github.com/iotbzh/docker-tools.git</param>
     <param name="scm">git</param>
     <param name="version">0.1</param>
-    <param name="revision">e2250976fe2f45114c9c1941903c230d6a65a7f1</param>
+    <param name="revision">master</param>
+    <param name="extract">conf.d/packaging/rpm/docker-tools.spec</param>
+    <param name="extract">conf.d/packaging/arch/PKGBUILD</param>
   </service>
   <service name="recompress">
     <param name="compression">gz</param>

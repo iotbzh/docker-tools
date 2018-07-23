@@ -1,0 +1,31 @@
+# Maintainer: Vincent Nieutin <vincent.nieutin@iot.bzh>
+pkgname=docker-tools
+pkgver=0.1
+pkgrel=0
+epoch=
+pkgdesc="Collection of scripts to ease operations on docker containers"
+arch=('x86_64')
+url="Collection of scripts to ease operations on docker containers"
+license=('MIT')
+groups=('Development' 'Tools' 'Other')
+depends=('systemd')
+makedepends=()
+checkdepends=()
+optdepends=()
+provides=()
+conflicts=()
+replaces=()
+backup=()
+options=()
+install=
+changelog=
+source=("$pkgname-$pkgver.tar.gz")
+noextract=()
+md5sums=('cc1f2e79d172e0fee59e5705a2f27215')
+validpgpkeys=()
+
+package() {
+	cd "$pkgname-$pkgver"
+	make
+	make DESTDIR="$pkgdir/" install
+}
