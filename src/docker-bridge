@@ -20,7 +20,7 @@
 ################################## Usage ##################################
 
 function usage {
-    echo "usage: $(basename "$0") < create | revert > [ --yes | --no | --dry-run ]";
+    echo "usage: $(basename "$0") < create | delete > [ --yes | --no | --dry-run ]";
     echo
     echo "    create       -> Create a bridge (linked to the default interface).";
     echo "    delete       -> Delete the bridge (revert your old default interface).";
@@ -244,9 +244,9 @@ done
 ############################# Read parameters #############################
 
 if [ "$OPERATION" == "create" ]; then
-    createbridge; exit
+    createbridge; exit 0
 elif [ "$OPERATION" == "delete" ]; then
-    deletebridge; exit
+    deletebridge; exit 0
 fi
 
 usage; exit 1
