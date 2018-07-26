@@ -81,3 +81,20 @@ dockreg:443/iotbzh/owncloud:8.2.0
 dockreg:443/iotbzh/true:1.0
 dockreg:443/iotbzh/true:latest
 ```
+
+### docker-bridge
+
+Replaces your default interface with a bridge linked to the same interface.
+
+usage: docker-bridge < create | revert > [ --yes | --no | --dry-run ]
+
+- create -> Create a bridge (linked to the default interface).
+- delete -> Delete the bridge (revert your old default interface).
+
+Options:";
+    [-y, --yes]                     -> Answer yes without user interaction.
+    [-n, --no]                      -> Answer no without user interaction.
+    [-d, --dry-run]                 -> Don't do anything, only print.
+    [-h, --help]                    -> Show this usage.
+
+WARNING: Creating this bridge will monopolize your default interface!
