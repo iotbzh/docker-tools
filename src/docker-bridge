@@ -17,6 +17,9 @@
 # limitations under the License.
 ###########################################################################
 
+set -e
+TOOL="\\e[33m$(basename "$0")\\e[0m"
+
 ################################## Usage ##################################
 
 function usage {
@@ -34,10 +37,35 @@ function usage {
     echo "WARNING: Creating this bridge will monopolize your default interface!";
 }
 
-###################### Basic vars, traps & functions ######################
+########################### Capture parameters ############################
 
-set -e
-TOOL="\\e[33m$(basename "$0")\\e[0m"
+while [ $# -ne 0 ]; do
+    case $1 in
+        -h|--help|"")
+            usage; exit 0
+        ;;
+        create)
+            OPERATION="create"
+        ;;
+        delete)
+            OPERATION="delete"
+        ;;
+        -y|--yes)
+            AUTO_ANSWER="yes"
+        ;;
+        -n|--no|-d|--dry-run)
+            AUTO_ANSWER="no"
+        ;;
+        *)
+            echo "hmm hmm, $1 ?"
+        ;;
+    esac
+    shift
+done
+
+[ -n "$OPERATION" ] || usage;exit 1
+
+######################### Basic traps & functions #########################
 
 function print { echo -e "$TOOL - $1"; }
 
@@ -72,29 +100,29 @@ function getResultOf {
 
 function createbridge {
     print "Create bridge"
-
+    
     ######################## Retrieval of informations ########################
-
+    
     print "Automatic retrieval of informations."
-
+    
     # Retrieves the default interface
     getResultOf "ip r | grep default | grep -Eo \"dev [a-z0-9]+\" | cut -d' ' -f2 | head -1" "DEFAULT_INTERFACE"
-
+    
     # Retrieves the default interface gateway
     getResultOf "ip r | grep default | grep -Eo \"via [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+\" | cut -d' ' -f2" "DEFAULT_GATEWAY"
-
+    
     # Search for a free bridge interface name
     bridges=($(brctl show | tail -n +2 | tr '\t' ' ' | tr -s ' ' | cut -d' ' -f1))
     i=0
     while containsElement "br$i" "${bridges[@]}"; do ((i++)); done
     NEW_BRIDGE="br$i"
     verifAutoVar "NEW_BRIDGE"
-
+    
     # Retrieves the default interface inet
     getResultOf "ip a s \"$DEFAULT_INTERFACE\" | grep -Eo \"inet [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+\" | cut -d' ' -f2" "DEFAULT_INET"
-
+    
     ############################## User approval ##############################
-
+    
     # Requires user approval if it has not set --yes or --no.
     if [ -z "$AUTO_ANSWER" ]; then
         echo "nb: You can automate this step with \"-y\" or \"-n\"."
@@ -107,60 +135,60 @@ function createbridge {
             esac
         done
     elif ! [ "$AUTO_ANSWER" == "yes" ]; then exit; fi
-
+    
     ############################## Bridge setup ###############################
-
+    
     print "Setup $NEW_BRIDGE"
-
+    
     sudo brctl addbr "$NEW_BRIDGE"
     sudo ip link set "$NEW_BRIDGE" up
     sudo ip addr del "$DEFAULT_INET" dev "$DEFAULT_INTERFACE"; \
     sudo brctl addif "$NEW_BRIDGE" "$DEFAULT_INTERFACE"; \
     sudo ip addr add "$DEFAULT_INET" dev "$NEW_BRIDGE"
     sudo ip route replace default via "$DEFAULT_GATEWAY" dev "$NEW_BRIDGE"
-
+    
     ############################## Bridge verif ###############################
-
+    
     print "Verif $NEW_BRIDGE well created"
-
+    
     # Verif bridge created
     ! ip a s "$NEW_BRIDGE" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE not found!"; exit 1; }
-
+    
     # Verif bridge up
     ! ip a s "$NEW_BRIDGE" | head -1 | grep "UP" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE isn't UP!"; exit 1; }
-
+    
     # Verif old interface inet deleted
     ip a s "$DEFAULT_INTERFACE" | grep "inet " | grep "$DEFAULT_INET" &>/dev/null && { print "ERROR: Interface $DEFAULT_INTERFACE still have $DEFAULT_INET address!"; exit 1; }
-
+    
     # Verif bridge & interface linking
-    ! brctl show "$NEW_BRIDGE" | grep "$DEFAULT_INTERFACE" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not contain interface $DEFAULT_INTERFACE !"; exit 1; }
-
+    ! $(which brctl) show "$NEW_BRIDGE" | grep "$DEFAULT_INTERFACE" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not contain interface $DEFAULT_INTERFACE !"; exit 1; }
+    
     # Verif bridge inet
     ! ip a s "$NEW_BRIDGE" | grep "inet " | grep "$DEFAULT_INET" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not have the new $DEFAULT_INET address!"; exit 1; }
-
+    
     # Verif default route changed (From $DEFAULT_INTERFACE to $NEW_BRIDGE interface)
     ip r | grep default | grep "$DEFAULT_INTERFACE" &>/dev/null && { print "ERROR: Default route still have $DEFAULT_INTERFACE interface!"; exit 1; }
     ! ip r | grep default | grep "$NEW_BRIDGE" &>/dev/null && { print "ERROR: Default route does not have $NEW_BRIDGE interface!"; exit 1; }
-
+    
     print "Bridge $NEW_BRIDGE has been well created!"
 }
 
 
 function deletebridge {
     print "Delete bridge"
-
+    
     ######################## Retrieval of informations ########################
-
+    
     print "Automatic retrieval of informations."
-
+    
     # Retrieves the default interface
     getResultOf "ip r | grep default | grep -Eo \"dev [a-z0-9]+\" | cut -d' ' -f2 | head -1" "DEFAULT_INTERFACE"
     # Verif default interface is a bridge
     echo "$DEFAULT_INTERFACE" | grep -Eo "br[0-9]+" &>/dev/null || { print "ERROR: Default interface $DEFAULT_INTERFACE is not a bridge!"; exit 1; }
-
+    
     # Retrieves the default interface gateway
     getResultOf "ip r | grep default | grep $DEFAULT_INTERFACE | grep -Eo \"via [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+\" | cut -d' ' -f2" "DEFAULT_GATEWAY"
-
+    
     # Retrieves the default interface inet
     getResultOf "ip a s \"$DEFAULT_INTERFACE\" | grep -Eo \"inet [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+\" | cut -d' ' -f2" "DEFAULT_INET"
     # Retrieve old interface name
@@ -169,9 +197,9 @@ function deletebridge {
     ## basename "$(readlink -f /sys/class/net/* | grep -v virtual)" # Real physical interfaces
     # Verif REAL & DEFAULT interfaces are different
     [ "$DEFAULT_INTERFACE" != "$REAL_INTERFACE" ] || { print "ERROR: Default bridge interface ($DEFAULT_INTERFACE) and the real physical interface ($REAL_INTERFACE) are identical!"; exit 1; }
-
+    
     ############################## User approval ##############################
-
+    
     # Requires user approval if it has not set --yes or --no.
     if [ -z "$AUTO_ANSWER" ]; then
         echo "nb: You can automate this step with \"-y\" or \"-n\"."
@@ -184,68 +212,42 @@ function deletebridge {
             esac
         done
     elif ! [ "$AUTO_ANSWER" == "yes" ]; then exit; fi
-
+    
     ############################## Revert bridge ##############################
-
+    
     print "Revert $DEFAULT_INTERFACE"
-
+    
     sudo ip link set "$DEFAULT_INTERFACE" down; \
     sudo brctl delbr "$DEFAULT_INTERFACE"; \
     sudo ip addr add "$DEFAULT_INET" dev "$REAL_INTERFACE"; \
     sudo ip route replace default via "$DEFAULT_GATEWAY" dev "$REAL_INTERFACE"
-
+    
     OLD_BRIDGE="$DEFAULT_INTERFACE"
-
+    
     ############################## Revert verif ###############################
-
+    
     print "Verif $OLD_BRIDGE reverted"
-
+    
     # Verif bridge deleted
     ip a s "$OLD_BRIDGE" &>/dev/null && { print "ERROR: Bridge $OLD_BRIDGE still exists!"; exit 1; }
-
+    
     # Verif interface inet
     ! ip a s "$REAL_INTERFACE" | grep "inet " | grep "$DEFAULT_INET" &>/dev/null && { print "ERROR: Interface $REAL_INTERFACE does not have the new $DEFAULT_INET address!"; exit 1; }
-
+    
     # Verif interface up
     ! ip a s "$REAL_INTERFACE" | head -1 | grep "UP" &>/dev/null && { print "ERROR: Interface $REAL_INTERFACE isn't UP!"; exit 1; }
-
+    
     # Verif default route
     ! ip r | grep default | grep "$REAL_INTERFACE" &>/dev/null && { print "ERROR: Default route does not have $REAL_INTERFACE interface!"; exit 1; }
-
+    
     print "Bridge $OLD_BRIDGE has been well reverted!"
 }
-
-########################### Capture parameters ############################
-
-while [ $# -ne 0 ]; do
-    case $1 in
-        -h|--help|"")
-            usage; exit
-        ;;
-        create)
-            OPERATION="create"
-        ;;
-        delete)
-            OPERATION="delete"
-        ;;
-        -y|--yes)
-            AUTO_ANSWER="yes"
-        ;;
-        -n|--no|-d|--dry-run)
-            AUTO_ANSWER="no"
-        ;;
-        *)
-            echo "hmm hmm, $1 ?"
-        ;;
-    esac
-    shift
-done
 
 ############################# Read parameters #############################
 
 if [ "$OPERATION" == "create" ]; then
     createbridge; exit 0
-elif [ "$OPERATION" == "delete" ]; then
+    elif [ "$OPERATION" == "delete" ]; then
     deletebridge; exit 0
 fi
 
