@@ -63,7 +63,7 @@ while [ $# -ne 0 ]; do
     shift
 done
 
-[ -n "$OPERATION" ] || usage;exit 1
+[ -n "$OPERATION" ] || { usage;exit 1; }
 
 ######################### Basic traps & functions #########################
 
