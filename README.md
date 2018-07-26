@@ -91,10 +91,11 @@ usage: docker-bridge < create | revert > [ --yes | --no | --dry-run ]
 - create -> Create a bridge (linked to the default interface).
 - delete -> Delete the bridge (revert your old default interface).
 
-Options:";
-    [-y, --yes]                     -> Answer yes without user interaction.
-    [-n, --no]                      -> Answer no without user interaction.
-    [-d, --dry-run]                 -> Don't do anything, only print.
-    [-h, --help]                    -> Show this usage.
+Options:;
+
+- [-y, --yes]     -> Answer yes without user interaction.
+- [-n, --no]      -> Answer no without user interaction.
+- [-d, --dry-run] -> Don't do anything, only print.
+- [-h, --help]    -> Show this usage.
 
 WARNING: Creating this bridge will monopolize your default interface!
