@@ -86,12 +86,12 @@ dockreg:443/iotbzh/true:latest
 
 Replaces your default interface with a bridge linked to the same interface.
 
-usage: docker-bridge < create | revert > [ --yes | --no | --dry-run ]
+usage: docker-bridge < create | delete > [ --yes | --no | --dry-run ]
 
 - create -> Create a bridge (linked to the default interface).
 - delete -> Delete the bridge (revert your old default interface).
 
-Options:;
+Options:
 
 - [-y, --yes]     -> Answer yes without user interaction.
 - [-n, --no]      -> Answer no without user interaction.
