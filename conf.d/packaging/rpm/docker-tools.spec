@@ -26,6 +26,7 @@ Group:          Development/Tools/Other
 Url:            https://github.com/iotbzh/docker-tools
 Source:         %{name}-%{version}.tar.gz
 BuildRequires:  systemd
+Requires:       bridge-utils
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
