@@ -194,7 +194,7 @@ function deletebridge {
     # Retrieves the default interface inet
     getResultOf "ip a s \"$DEFAULT_INTERFACE\" | grep -Eo \"inet [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+/[0-9]+\" | cut -d' ' -f2" "DEFAULT_INET"
     # Retrieve old interface name
-    getResultOf "${SUDOCMD} bridge link | grep \"$DEFAULT_INTERFACE\" | cut -d' ' -f2 | grep -Fo $(basename $(readlink -f /sys/class/net/* | grep -v virtual))" "REAL_INTERFACE"
+    getResultOf "${SUDOCMD} bridge link | grep \"$DEFAULT_INTERFACE\" | cut -d' ' -f2 | grep -Fo \"$(basename -a $(readlink -f /sys/class/net/* | grep -v virtual))\"" "REAL_INTERFACE"
     ## bridge link | grep "$DEFAULT_INTERFACE" | cut -d' ' -f2 # Bridge interfaces list
     ## basename "$(readlink -f /sys/class/net/* | grep -v virtual)" # Real physical interfaces
     # Verif REAL & DEFAULT interfaces are different
