@@ -19,7 +19,9 @@
 
 set -e
 TOOL="\\e[33m$(basename "$0")\\e[0m"
-
+if [ "$(id -u)" -ne "0" ]; then
+        SUDOCMD="sudo "
+fi
 ################################## Usage ##################################
 
 function usage {
@@ -112,7 +114,7 @@ function createbridge {
     getResultOf "ip r | grep default | grep -Eo \"via [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+\" | cut -d' ' -f2" "DEFAULT_GATEWAY"
     
     # Search for a free bridge interface name
-    bridges=($(brctl show | tail -n +2 | tr '\t' ' ' | tr -s ' ' | cut -d' ' -f1))
+    bridges=($(${SUDOCMD} brctl show | tail -n +2 | tr '\t' ' ' | tr -s ' ' | cut -d' ' -f1))
     i=0
     while containsElement "br$i" "${bridges[@]}"; do ((i++)); done
     NEW_BRIDGE="br$i"
@@ -140,12 +142,12 @@ function createbridge {
     
     print "Setup $NEW_BRIDGE"
     
-    sudo brctl addbr "$NEW_BRIDGE"
-    sudo ip link set "$NEW_BRIDGE" up
-    sudo ip addr del "$DEFAULT_INET" dev "$DEFAULT_INTERFACE"; \
-    sudo brctl addif "$NEW_BRIDGE" "$DEFAULT_INTERFACE"; \
-    sudo ip addr add "$DEFAULT_INET" dev "$NEW_BRIDGE"
-    sudo ip route replace default via "$DEFAULT_GATEWAY" dev "$NEW_BRIDGE"
+    ${SUDOCMD} brctl addbr "$NEW_BRIDGE"
+    ${SUDOCMD} ip link set "$NEW_BRIDGE" up
+    ${SUDOCMD} ip addr del "$DEFAULT_INET" dev "$DEFAULT_INTERFACE"; \
+    ${SUDOCMD} brctl addif "$NEW_BRIDGE" "$DEFAULT_INTERFACE"; \
+    ${SUDOCMD} ip addr add "$DEFAULT_INET" dev "$NEW_BRIDGE"
+    ${SUDOCMD} ip route replace default via "$DEFAULT_GATEWAY" dev "$NEW_BRIDGE"
     
     ############################## Bridge verif ###############################
     
@@ -161,7 +163,7 @@ function createbridge {
     ip a s "$DEFAULT_INTERFACE" | grep "inet " | grep "$DEFAULT_INET" &>/dev/null && { print "ERROR: Interface $DEFAULT_INTERFACE still have $DEFAULT_INET address!"; exit 1; }
     
     # Verif bridge & interface linking
-    ! $(which brctl) show "$NEW_BRIDGE" | grep "$DEFAULT_INTERFACE" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not contain interface $DEFAULT_INTERFACE !"; exit 1; }
+    ! ${SUDOCMD} brctl show "$NEW_BRIDGE" | grep "$DEFAULT_INTERFACE" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not contain interface $DEFAULT_INTERFACE !"; exit 1; }
     
     # Verif bridge inet
     ! ip a s "$NEW_BRIDGE" | grep "inet " | grep "$DEFAULT_INET" &>/dev/null && { print "ERROR: Bridge $NEW_BRIDGE does not have the new $DEFAULT_INET address!"; exit 1; }
@@ -217,10 +219,10 @@ function deletebridge {
     
     print "Revert $DEFAULT_INTERFACE"
     
-    sudo ip link set "$DEFAULT_INTERFACE" down; \
-    sudo brctl delbr "$DEFAULT_INTERFACE"; \
-    sudo ip addr add "$DEFAULT_INET" dev "$REAL_INTERFACE"; \
-    sudo ip route replace default via "$DEFAULT_GATEWAY" dev "$REAL_INTERFACE"
+    ${SUDOCMD} ip link set "$DEFAULT_INTERFACE" down; \
+    ${SUDOCMD} brctl delbr "$DEFAULT_INTERFACE"; \
+    ${SUDOCMD} ip addr add "$DEFAULT_INET" dev "$REAL_INTERFACE"; \
+    ${SUDOCMD} ip route replace default via "$DEFAULT_GATEWAY" dev "$REAL_INTERFACE"
     
     OLD_BRIDGE="$DEFAULT_INTERFACE"
     
